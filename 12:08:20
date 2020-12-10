@@ -1,11 +1,14 @@
+
 from copy import deepcopy
 from util import Vertex
 from util import Edge
 from util import Graph
 from util import *
-import copy
 import random
 import math
+
+def IncidentEdges(graph, vertex):
+		return [e for e in graph.E if (e.a == vertex or e.b == vertex)]
 
 def graph_dictionary(graph):
 	vertex_dictionary = {}
@@ -16,25 +19,26 @@ def graph_dictionary(graph):
 		vertex_dictionary[edge.a].add(edge.b)
 	return vertex_dictionary
 
+#find the vertex with the index = i so that you can remove that.
+#operations on that vertex
+#at the call site for percolate child, would send graph, v.index
 def PercolateChild(graph, index):
-	child_graph = Graph(copy.copy(graph.V), copy.copy(graph.E))
+	child_graph = deepcopy(graph)
 	v = None
 	for vertex in child_graph.V:
 		if vertex.index == index:
 			v = vertex
-	for e in IncidentEdges(child_graph, v):
+	for e in IncidentEdges(graph, v):
 		child_graph.E.remove(e)
-    # Remove this vertex.
 	child_graph.V.remove(v)
-    # Remove all isolated vertices.
-	to_remove = {u for u in child_graph.V if len(IncidentEdges(child_graph, u)) == 0}
+	to_remove = {u for u in child_graph.V if len(IncidentEdges(graph, u)) == 0}
 	child_graph.V.difference_update(to_remove)
 	return child_graph
 
 def score2(graph, player):
-	print("INSCORE2")
 	if len(graph.V) == 0:
 		print(graph.V)
+		#print(graph)
 		print("EMPTY GRAPH")
 		if player:
 			return (math.inf)
@@ -47,100 +51,8 @@ def score2(graph, player):
 	else:
 		return (-math.inf)
 
-def minimax_root(graph, player):
-	my_vertices = [v for v in graph.V if v.color == player]
-	children_values = {}
-	for vertex in my_vertices:
-		move = vertex.index
-		child = PercolateChild(graph, vertex.index)
-		children_values[move] = minimax(child, 1-player, 0, 2, {})
-	best_move = None
-	best_score = 0
-
-	for (move, value) in children_values.items():
-		print(move, value)
-		if value > best_score:
-			best_move = move
-			best_score = value
-	print(best_move)
-	for v in graph.V:
-		if v.index == best_move:
-			print("VERTEX = nest move")
-			print (v)
-			return v
-
-	if best_move == None:
-		"NONE SITUATION"
-		return random.choice(my_vertices)
-
-	# make sure we return a vertex either here, or in GetVertexToRemove later
-#	return [v for v in graph.V if v.index == best_move]
-
-
-def minimax(graph, player, currentDepth, targetDepth, counts):
-	if currentDepth not in counts:
-		counts[currentDepth] = 0
-	counts[currentDepth] += 1
-	#print(counts)
-	mine = [v for v in graph.V if v.color == player]
-
-	if isFinished(graph, player):
-		#print("Is finished")
-		#print(graph)
-		return score2(graph, player)
-
-	if currentDepth == targetDepth:
-		#import pdb; pdb.set_trace()
-		#print("currentDepth == targetDepth")
-		return heuristic(graph, player)
-
-	if player == 0:
-		m_m = {}
-		graph_children = []
-		for vertex in mine:
-			move = vertex.index
-			child = PercolateChild(graph, move)
-			m_m[move] = minimax(child, 1-player, currentDepth+1, targetDepth, counts)
-			#print(graph_children)
-
-		best_move = None
-		best_score = 0
-		for (move, score) in m_m.items():
-			if score > best_score:
-				best_move = move
-				best_score = score
-
-		return (best_score)
-
-	else:
-		m_m = {}
-		for vertex in mine:
-			move = vertex.index
-			child = PercolateChild(graph, move)
-			m_m[move] = minimax(child, 1-player, currentDepth+1, targetDepth, counts)
-			#print(graph_children)
-
-		best_move = None
-		best_score = math.inf
-		for (move, score) in m_m.items():
-			if score < best_score:
-				best_move = move
-				best_score = score
-		return (best_score)
-
-def Neighbors(graph, v):
-	vertices = set()
-	for edge in graph.E:
-		if edge.a == v:
-			vertices.add(edge.b)
-		elif edge.b == v:
-			vertices.add(edge.a)
-	return vertices
-
-def isFinished(graph, player):
-	player_vertices = [v for v in graph.V if v.color == player]
-	other_player_vertices = [v for v in graph.V if v.color == 1-player]
-	return len(player_vertices) == 0 or len(other_player_vertices) == 0
+def heuristic2 (graph, player):
+	return random.randint(-3,3)
 
 def heuristic(graph, player):
 	scores = {}
@@ -149,7 +61,6 @@ def heuristic(graph, player):
 	for vertex in graph.V:
 		if vertex.color == player:
 			candidates_to_remove.append(vertex)
-
 	for vertex in candidates_to_remove:
 		other_destroyed = 0
 		self_destroyed = 0
@@ -164,8 +75,6 @@ def heuristic(graph, player):
 			scores[vertex] = 3
 		else:
 			scores[vertex] = -3
-
-	#import pdb; pdb.set_trace()
 
 	min_degree_vertex = None
 	min_neighbors = math.inf
@@ -184,12 +93,90 @@ def heuristic(graph, player):
 				min_degree_vertex = vertex
 				min_neighbors = len(edges)
 				scores[vertex] = scores[vertex] + 1
-
-	#import pdb; pdb.set_trace()
-
-	best_score_vertex = max(scores, key=scores.get)
 	best_score = scores[(max(scores, key=scores.get))]
-	return (best_score)
+	print (best_score)
+	return best_score
+
+def minimax_root(graph, player):
+	my_vertices = [v for v in graph.V if v.color == player]
+	children_values = {}
+	for vertex in my_vertices:
+		move = vertex.index
+		child = PercolateChild(graph, vertex.index)
+		children_values[move] = minimax(child, 1-player, 0, 5)
+	print("CV", children_values)
+	best_move = None
+	best_score = 0
+
+	for (move, value) in children_values.items():
+		if value > best_score:
+			best_move = move
+			best_score = value
+
+	if best_move == None:
+		return random.choice(my_vertices)
+
+	for vertex in my_vertices:
+		#print("BEST MOVE", best_move, best_score)
+		if vertex.index == best_move:
+			return vertex
+
+def isFinished(graph, player):
+	player_vertices = [v for v in graph.V if v.color == player]
+	other_player_vertices = [v for v in graph.V if v.color == 1-player]
+	return len(player_vertices) == 0 or len(other_player_vertices) == 0
+
+def minimax(graph, player, currentDepth, targetDepth):
+	mine = []
+	for vertex in graph.V:
+		if vertex.color == player:
+			mine.append(vertex)
+
+	if isFinished(graph, player):
+	#	print("Is finished")
+		#print(graph)
+		return score2(graph, player)
+
+	if currentDepth == targetDepth:
+		#print("currentDepth == targetDepth")
+		return heuristic2(graph, player)
+
+	if player == 0:
+		print("STILL GETTING HERE")
+		m_m = {}
+		graph_children = []
+		for vertex in mine:
+			move = vertex.index
+			child = PercolateChild(graph, vertex.index)
+			m_m[move] = minimax(child, 1-player, currentDepth+1, targetDepth)
+
+		best_move = None
+		best_score = -math.inf
+		for (move, score) in m_m.items():
+			#print("GETTING HERE - player")
+			if score > best_score:
+				best_move = move
+				best_score = score
+		print(best_score)
+		return (best_score)
+
+	else:
+			m_m = {}
+			for vertex in mine:
+				move = vertex.index
+				child = PercolateChild(graph, vertex.index)
+				m_m[move] = minimax(child, 1-player, currentDepth+1, targetDepth)
+
+			#print(m_m)
+			best_move = None
+			best_score = math.inf
+			for (move, score) in m_m.items():
+				#print("GETTING HERE - not player")
+				if score < best_score:
+					best_move = move
+					best_score = score
+			#print(best_score)
+			return (best_score)
 
 def GetEdge(graph,vertex,player):
 	edges = {}
@@ -212,11 +199,14 @@ def getDegree(graph,vertex):
 def getSelfDegree(graph,vertex,player):
 	edges = []
 	for edge in graph.E:
+		#print(type(edge.a))
 		if (edge.a == vertex or edge.b == vertex) and (edge.a == player or edge.b == player):
 			edges.append(edge)
 	return len(edges)
 
 class PercolationPlayer:
+	# `graph` is an instance of a Graph, `player` is an integer (0 or 1).
+# Should return a vertex `v` from graph.V where v.color == -1
 
 	def ChooseVertexToColor(graph, player):
 		max_vertices = []
@@ -232,6 +222,7 @@ class PercolationPlayer:
 				max_degree_vertex = vertex
 				max_degree = degree
 				max_vertices.append(vertex)
+		#print(max_vertices)
 		if len(max_vertices) > 0:
 			max_self = -math.inf
 			max_self_vertex = max_vertices[0]
@@ -242,12 +233,18 @@ class PercolationPlayer:
 					max_self_vertex = vertex
 			return max_self_vertex
 		return max_degree_vertex
+
+
 	# `graph` is an instance of a Graph, `player` is an integer (0 or 1).
 	# Should return a vertex `v` from graph.V where v.color == player
 	def ChooseVertexToRemove(graph, player):
+		#print("HERE")
 		#print(minimax(graph, player, 0, 6))
 		#return(minimax_root(graph, player))
+		#minimax(graph, player, currentDepth, targetDepth)
 
+		#assign weights to various features
+		#print(heuristic(graph, player))
 		temporary_graph = deepcopy(graph)
 		candidates_to_remove = []
 		second_candidates = []
@@ -286,9 +283,10 @@ class PercolationPlayer:
 					min_neighbors = len(edges)
 
 		if min_degree_vertex == None:
-			print(min_neighbors)
-			print ("ERROR")
-		return min_degree_vertex
+
+			return min_degree_vertex
+
+
 
 # Feel free to put any personal driver code here.
 def main():
@@ -296,6 +294,7 @@ def main():
 	v2 = Vertex("B", 0)
 	v3 = Vertex("C", 0)
 	v4 = Vertex("D", 0)
+
 	e1 = Edge(v1, v2)
 	e2 = Edge(v3, v4)
 	e3 = Edge(v2, v3)
